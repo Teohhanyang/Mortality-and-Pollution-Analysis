@@ -8,6 +8,9 @@ output: html_document
 body {
   font-size: 165%;
 }
+th, td {
+  padding: 10 px;
+}
 ```
 
 ```{r setup, include=FALSE}
@@ -27,7 +30,39 @@ library(plotly)
 library(grid)
 library(gridExtra)
 ```
+## The data
 
+<table border="1">
+        <thead>
+            <tr>
+                <th>Variable</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Mortality</td>
+                <td>Age-adjusted mortality rate, expressed as deaths per 100,000 people.</td>
+            </tr>
+            <tr>
+                <td>Nox</td>
+                <td>A measure of pollution levels of nitrogen oxides.</td>
+            </tr>
+            <tr>
+                <td>Sox</td>
+                <td>A measure of pollution levels of sulphur dioxide.</td>
+            </tr>
+            <tr>
+                <td>Prec</td>
+                <td>Mean annual precipitation in inches.</td>
+            </tr>
+            <tr>
+                <td>Income</td>
+                <td>Each city is classified as either 'High' or 'Low' income.</td>
+            </tr>
+        </tbody>
+    </table>
+    
 ```{r data, include = FALSE}
 poldata = read.table("PolData.txt",header = TRUE)
 ```

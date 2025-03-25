@@ -361,6 +361,9 @@ display: none;
 body {
 font-size: 165%;
 }
+th, td {
+padding: 10 px;
+}
 </style>
 <pre class="r"><code>library(ggplot2)
 library(ggpubr)
@@ -373,7 +376,64 @@ library(leaps)
 library(plotly)
 library(grid)
 library(gridExtra)</code></pre>
+<div id="the-data" class="section level2">
+<h2>The data</h2>
+<table border="1">
+<thead>
+<tr>
+<th>
+Variable
+</th>
+<th>
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Mortality
+</td>
+<td>
+Age-adjusted mortality rate, expressed as deaths per 100,000 people.
+</td>
+</tr>
+<tr>
+<td>
+Nox
+</td>
+<td>
+A measure of pollution levels of nitrogen oxides.
+</td>
+</tr>
+<tr>
+<td>
+Sox
+</td>
+<td>
+A measure of pollution levels of sulphur dioxide.
+</td>
+</tr>
+<tr>
+<td>
+Prec
+</td>
+<td>
+Mean annual precipitation in inches.
+</td>
+</tr>
+<tr>
+<td>
+Income
+</td>
+<td>
+Each city is classified as either ‘High’ or ‘Low’ income.
+</td>
+</tr>
+</tbody>
+</table>
 <p><br><br></p>
+</div>
 <div id="summary" class="section level2">
 <h2>Summary</h2>
 <p>The United States Environmental Protection Agency was interested in
