@@ -1,0 +1,199 @@
+---
+title: "Mortality and Pollution Analysis"
+author: "Teoh Han Yang"
+date: "2025-03-10"
+output: html_document
+---
+```{css, echo=FALSE}
+body {
+  font-size: 165%;
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width=8, fig.height=4)
+```
+
+```{r libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(ggpubr)
+library(patchwork)
+library(corrplot)
+library(GGally)
+library(dplyr)
+library(reshape2)
+library(leaps)
+library(plotly)
+library(grid)
+library(gridExtra)
+```
+
+```{r data, include = FALSE}
+poldata = read.table("PolData.txt",header = TRUE)
+```
+<br><br>
+
+## Summary
+
+The United States Environmental Protection Agency was interested in the possible associations between levels of pollution and mortality rates in US cities. The mortality rates and variables relating to pollution, weather and income levels in 60 cities in the USA were analyzed. 
+
+Correlation between variables and mortality rates were investigated. There exists strong linear correlation between Nox and Sox. Furthermore, Sox, log(Nox) and Prec had strong linear correlation with Mortality. However, beyond what was already captured by log(nox) and Prec, Sox did not have significant impact on the model.
+
+A linear regression model was fitted:
+$$Mortality = 940.36 + 29.14 \log(\text{Nox}) + 4.45 \text{Prec}$$
+After controlling for log(Nox) levels, every unit increase in Prec increases Mortality by 4.45 units. After controlling for Prec, every 1% increase in Nox increases Mortality by approximately 1% of 29.14 = 0.29 units. The expected mortality rate for cities with average levels of log(NOX) and Prec was 940.36.
+
+Based on the model, the agency was advised to focus mainly on reducing Nox levels and put less emphasis on Sox levels.
+
+<br><br>
+
+## Exploratory Data Analysis
+
+The distribution of Nox was first analyzed. As seen in Figure 1, Nox contains possible outliers towards the right end of its distribution. By looking only at data where Nox < 100 in Figure 2, the distribution of Nox appears to be right-skewed. Furthermore, the scatterplot of mortality against Nox in Figure 3 shows a possible exponential relationship between the two variables. 
+
+```{r Nox, echo=TRUE}
+p1 <- ggplot(poldata, aes(x = Nox)) +
+  geom_histogram(color = "steelblue", fill = "lightblue") +
+  labs(title = "Histogram of Nox",
+       x = "Nox",
+       y = "Frequency") +
+  annotate("text", x = Inf, y = Inf, label = "Figure 1", hjust = 1.2, vjust = 1.2, size = 5, fontface = "bold")
+
+nox_lessthan100 <- subset(poldata, Nox < 100)
+p2 <- ggplot(nox_lessthan100, aes(x = Nox)) +
+  geom_histogram(color = "steelblue", fill = "lightblue") +
+  labs(title = "Histogram of Nox < 100",
+       x = "Nox",
+       y = "Frequency") +
+  annotate("text", x = Inf, y = Inf, label = "Figure 2", hjust = 1.2, vjust = 1.2, size = 5, fontface = "bold")
+
+p1 + p2
+
+ggplot(poldata, aes(x = Nox, y = mortality)) +
+  geom_point(color = "steelblue") +
+  labs(title = "Mortality vs Nox",
+       x = "Nox",
+       y = "Mortality") +
+  annotate("text", x = Inf, y = Inf, label = "Figure 3", hjust = 1.2, vjust = 1.2, size = 5, fontface = "bold")
+```
+
+The right-skewed distribution of Nox, along with the potential outliers and the possible exponential relationship motivates a log-transformation of Nox. Also, a log-transformation was valid as all Nox values were positive. Figure 4 shows that the log-transformation has corrected the exponential relationship. Figure 5 shows that the right- skewness in the distribution of Nox was also reduced. The impact of the potential outliers still needs to be assessed though their impact on the distribution appears to have been reduced after transformation. 
+
+log(Nox) will be used in all subsequent analysis and modelling.
+
+```{r Nox transform, echo=TRUE}
+poldata$Nox <- log(poldata$Nox)
+colnames(poldata)[colnames(poldata) == "Nox"] <- "log(Nox)"
+```
+
+```{r log(Nox), echo=TRUE}
+p1 <- ggplot(poldata, aes(x = `log(Nox)`, y = mortality)) +
+  geom_point(color = "steelblue") +
+  labs(title = "Mortality vs log(Nox)",
+       x = "log(Nox)",
+       y = "Mortality") +
+  annotate("text", x = Inf, y = Inf, label = "Figure 4", hjust = 1.2, vjust = 1.2, size = 5, fontface = "bold")
+
+p2 <- ggplot(poldata, aes(x = `log(Nox)`)) +
+  geom_histogram(color = "steelblue", fill = "lightblue") +
+  labs(title = "Histogram of log(Nox)",
+       x = "Nox",
+       y = "Frequency") +
+  annotate("text", x = Inf, y = Inf, label = "Figure 5", hjust = 1.2, vjust = 1.2, size = 5, fontface = "bold")
+
+p1 + p2
+```
+
+On the other hand, according to Figure 7 both the correlation coefficient and the scatteplot between mean annual precipitation (Prec) and mortality rate shows that there exists a linear relationship between the two variables. Sox and log(Nox) also appeared highly correlated by the same reasonings. Judging by the highly overlapped boxplot between mortality and income in Figure 6, there was unlikely a linear relationship between the two variables. 
+
+```{r Correlation, echo=TRUE}
+ggplot(poldata, aes(x = Income, y = mortality)) +
+    geom_boxplot() +
+    labs(title = "Mortality vs Income") +
+  annotate("text", x = Inf, y = Inf, label = "Figure 6", hjust = 1.2, vjust = 1.2, size = 5, fontface = "bold")
+
+numeric_cols <- poldata[, sapply(poldata, is.numeric)]
+ggpairs(numeric_cols, lower = list(continuous = wrap("points", alpha = 0.5)))
+```
+
+<br><br>
+
+## Model Fitting
+
+Income appeared to have low correlation with mortality so income will be dropped from the model. There was evidence to support this decision, since by using best subsets regression up to 3 covariates, the linear regression model with the best adjusted R2 was:
+$$Mortality = B_0 + B_1 \log(\text{Nox}) + B_2 \text{Sox} + B_3 \text{Prec}$$
+```{r bestsubsets, echo=TRUE}
+best_subset <- regsubsets(mortality ~ `log(Nox)` + Sox + Prec + Income, data = poldata, nvmax = 3)
+summary_best <- summary(best_subset)
+best_model_index <- which.max(summary_best$adjr2)
+summary_best$which[best_model_index, ] 
+```
+<br>
+
+Since log(Nox) and Sox were highly correlated, one of them should be dropped. Furthermore, there was only a minimal difference in adjusted R2 between the full model containing both log(Nox) and Sox vs the models containing only log(Nox) or Sox.  Since the model with Sox had lower adjusted R2, Sox will be dropped from the model. 
+
+```{r adj R2, echo=TRUE}
+fullmodel <- lm(mortality ~ `log(Nox)` + Sox + Prec, data = poldata)
+model1 <- lm(mortality ~ `log(Nox)` + Prec, data = poldata)
+model2 <- lm(mortality ~ Sox + Prec, data = poldata)
+
+summary(fullmodel)$adj.r.squared
+summary(model1)$adj.r.squared
+summary(model2)$adj.r.squared
+```
+
+The distribution of Prec in Figure 7 shows it was unlikely for Prec to take values near 0, thus it would be difficult to interpret the intercept. Therefore, before calculating the coefficients the values of log(Nox) and Prec have been centered around their mean. The final model was:
+$$Mortality = 940.36 + 29.14 \log(\text{Nox}) + 4.45 \text{Prec}$$
+```{r final model, echo=TRUE}
+poldata$logNox_centered <- poldata$`log(Nox)` - mean(poldata$`log(Nox)`)
+poldata$Prec_centered <- poldata$Prec - mean(poldata$Prec)
+model_centered <- lm(mortality ~ logNox_centered + Prec_centered, data = poldata)
+summary(model_centered)
+```
+
+<br>
+After controlling for log(Nox) levels, every unit increase in Prec increases Mortality by 4.45 units. After controlling for Prec, every 1% increase in Nox increases Mortality by approximately 1% of 29.14 = 0.29 units. The expected mortality rate for cities with average levels of log(NOX) and Prec was 940.36.
+
+The residual plot of the model did not show obvious violation to the assumptions of linearity, homoscedasticity, and no correlation. 
+
+```{r residual plot, echo=TRUE}
+poldata$residuals <- residuals(model_centered)
+poldata$fitted_values <- fitted(model_centered)
+ggplot(poldata, aes(x = fitted_values, y = residuals)) +
+  geom_point(color = "blue") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Residual Plot", 
+       x = "Fitted Values", 
+       y = "Residuals") +
+  theme_minimal()
+```
+
+<br><br>
+
+## Advice for City 48
+```{r City 48, echo=FALSE}
+City48 = poldata[48,]
+City48
+```
+
+The Agency would like to know the likely impact on mortality of a reduction of both Nox and
+Sox to 40 for City 48. 
+
+After controlling for Prec levels, the reduction of Nox levels to 40 reduces mortality rates significantly to: 
+$$
+\text{Mortality}_{\text{at Nox40}} = 911.701 - 29.14 \left[ \log(171) - \log(40) \right] \\
+= 869.37
+$$
+However, Sox did not explain much additional variation in mortality rates beyond what was already captured by log(Nox) and Prec since adjusted R2 did not decrease significantly when Sox was dropped from the model. Furthermore, there exists high correlation between Sox and log(Nox). Therefore, the agency is advised to focus mainly on reducing Nox levels and put less emphasis on Sox levels; due to their correlation Sox levels would naturally decrease 
+along with Nox levels.
+
+<br><br>
+
+## Conclusion
+
+A parsimonious linear regression model to predict mortality rates is: 
+$$Mortality = 940.36 + 29.14 \log(\text{Nox}) + 4.45 \text{Prec}$$
+The adjusted R2 for this model was 0.51, thus 51% of the variation in Mortality was explained by the covariates. Further improvement could be done to increase the adjusted R2 value.
+
+Contrary to popular belief, income was insignificant in predicting mortality rates. 
+
