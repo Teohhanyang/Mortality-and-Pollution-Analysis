@@ -32,7 +32,10 @@
         </tbody>
     </table>
     
-The possible association between levels of pollution, weather, income, and mortality in 60 US cities were analysed using R. Indicators of pollution includes Nitrogen Oxide levels (Nox) and Sulfur Dioxide levels (Sox). Weather was indicated by Mean Annual Precipitation (MP), while income was classfied as either High or Low. A linear regression model was fitted to predict the likely impact on mortality of a reduction of both Nox and Sox levels to 40 for a particular city. Finally, a statistical report was generated and outputted via HTML.
+The possible association between levels of pollution, weather, income, and mortality in 60 US cities were analysed using R.
+- Exploratory data analysis was carried out to identify possible data transformations and correlations between variables
+- A linear regression model was fitted to predict the likely impact on mortality of a reduction of both Nox and Sox levels to 40 for a particular city
+- A statistical report was generated and outputted via HTML
 
 You can view the report here:
 https://teohhanyang.github.io/Mortality-and-Pollution-Analysis/Mortality-and-Pollution-Analysis.html 
